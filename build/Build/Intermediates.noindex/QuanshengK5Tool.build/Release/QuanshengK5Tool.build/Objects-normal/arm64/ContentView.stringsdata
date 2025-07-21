@@ -1,0 +1,552 @@
+{
+  "source": "/Users/dmitrijsibanov/Desktop/K5T/QuanshengK5Tool/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Quansheng K5 Tool",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 18
+        }
+      },
+      {
+        "comment": "",
+        "key": "Порт:",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "Выберите порт",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Обновить порты",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "Не выбран",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Подключиться",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 59
+        }
+      },
+      {
+        "comment": "",
+        "key": "Отключиться",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "Обновить устройства",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "Лог будет добавлен позже",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "Навигация",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 190
+        }
+      },
+      {
+        "comment": "",
+        "key": "Калибровка устройства",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 283
+        }
+      },
+      {
+        "comment": "",
+        "key": "Текущий уровень батареи: %@%%",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 287
+        }
+      },
+      {
+        "comment": "",
+        "key": "Считать калибровку",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 300
+        }
+      },
+      {
+        "comment": "",
+        "key": "Записать калибровку",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 305
+        }
+      },
+      {
+        "comment": "",
+        "key": "Данные калибровки батареи:",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 315
+        }
+      },
+      {
+        "comment": "",
+        "key": "Батарея",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 326
+        }
+      },
+      {
+        "comment": "",
+        "key": "Считать полную калибровку",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 333
+        }
+      },
+      {
+        "comment": "",
+        "key": "Записать полную калибровку",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 338
+        }
+      },
+      {
+        "comment": "",
+        "key": "Экспорт (старый)",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 345
+        }
+      },
+      {
+        "comment": "",
+        "key": "Импорт (старый)",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 350
+        }
+      },
+      {
+        "comment": "",
+        "key": "Полная",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 375
+        }
+      },
+      {
+        "comment": "",
+        "key": "Выполняется операция...",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 385
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 393
+        }
+      },
+      {
+        "comment": "",
+        "key": "Нет данных",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 524
+        }
+      },
+      {
+        "comment": "",
+        "key": "Управление прошивкой",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 568
+        }
+      },
+      {
+        "comment": "",
+        "key": "Текущая версия прошивки: %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 572
+        }
+      },
+      {
+        "comment": "",
+        "key": "Считать информацию о прошивке",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 574
+        }
+      },
+      {
+        "comment": "",
+        "key": "Обновление прошивки",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 583
+        }
+      },
+      {
+        "comment": "",
+        "key": "Прошить устройство",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 605
+        }
+      },
+      {
+        "comment": "",
+        "key": "Путь к файлу прошивки",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 588
+        }
+      },
+      {
+        "comment": "",
+        "key": "Выбрать файл",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 591
+        }
+      },
+      {
+        "comment": "",
+        "key": "Прошивка устройства... %@%%",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 598
+        }
+      },
+      {
+        "comment": "",
+        "key": "Настройки устройства",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 672
+        }
+      },
+      {
+        "comment": "",
+        "key": "Загрузка настроек...",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 679
+        }
+      },
+      {
+        "comment": "",
+        "key": "Основные настройки",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 687
+        }
+      },
+      {
+        "comment": "",
+        "key": "Дисплей",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 715
+        }
+      },
+      {
+        "comment": "",
+        "key": "Автоматическое сканирование",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 709
+        }
+      },
+      {
+        "comment": "",
+        "key": "Частота по умолчанию:",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 690
+        }
+      },
+      {
+        "comment": "",
+        "key": "MHz",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 692
+        }
+      },
+      {
+        "comment": "",
+        "key": "Мощность передачи:",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 698
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 700
+        }
+      },
+      {
+        "comment": "",
+        "key": "Низкая",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 701
+        }
+      },
+      {
+        "comment": "",
+        "key": "Средняя",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 702
+        }
+      },
+      {
+        "comment": "",
+        "key": "Высокая",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 703
+        }
+      },
+      {
+        "comment": "",
+        "key": "Автоотключение подсветки",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 726
+        }
+      },
+      {
+        "comment": "",
+        "key": "Яркость подсветки:",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 718
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 722
+        }
+      },
+      {
+        "comment": "",
+        "key": "Считать настройки",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 735
+        }
+      },
+      {
+        "comment": "",
+        "key": "Записать настройки",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 740
+        }
+      },
+      {
+        "comment": "",
+        "key": "Информация об устройстве",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 789
+        }
+      },
+      {
+        "comment": "",
+        "key": "Обновить информацию",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 846
+        }
+      },
+      {
+        "comment": "",
+        "key": "Получение информации...",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 796
+        }
+      },
+      {
+        "comment": "",
+        "key": "Основная информация",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 803
+        }
+      },
+      {
+        "comment": "",
+        "key": "Прошивка",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 813
+        }
+      },
+      {
+        "comment": "",
+        "key": "Технические характеристики",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 822
+        }
+      },
+      {
+        "comment": "",
+        "key": "Статус подключения",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 833
+        }
+      },
+      {
+        "comment": "",
+        "key": "Управление каналами",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 900
+        }
+      },
+      {
+        "comment": "",
+        "key": "Считать каналы",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 906
+        }
+      },
+      {
+        "comment": "",
+        "key": "Записать каналы",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 911
+        }
+      },
+      {
+        "comment": "",
+        "key": "Добавить канал",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 916
+        }
+      },
+      {
+        "comment": "",
+        "key": "Импорт/Экспорт",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 921
+        }
+      },
+      {
+        "comment": "",
+        "key": "Экспорт в JSON",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 922
+        }
+      },
+      {
+        "comment": "",
+        "key": "Импорт из JSON",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 927
+        }
+      },
+      {
+        "comment": "",
+        "key": "Экспорт в CSV",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 931
+        }
+      },
+      {
+        "comment": "",
+        "key": "Импорт из CSV",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 936
+        }
+      },
+      {
+        "comment": "",
+        "key": "Экспорт в CHIRP",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 940
+        }
+      },
+      {
+        "comment": "",
+        "key": "Загрузка каналов...",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 953
+        }
+      }
+    ]
+  },
+  "version": 1
+}

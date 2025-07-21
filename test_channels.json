@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "deviceModel": "Quansheng K5",
+  "exportDate": "2025-01-18T12:00:00Z",
+  "channels": [
+    {
+      "index": 0,
+      "frequency": 145.500,
+      "name": "Repeater",
+      "txPower": 2,
+      "bandwidth": "narrow",
+      "scrambler": false,
+      "rxTone": {
+        "type": "ctcss",
+        "value": 88.5
+      },
+      "txTone": {
+        "type": "ctcss",
+        "value": 88.5
+      }
+    },
+    {
+      "index": 1,
+      "frequency": 146.520,
+      "name": "Calling",
+      "txPower": 1,
+      "bandwidth": "narrow",
+      "scrambler": false,
+      "rxTone": {
+        "type": "none"
+      },
+      "txTone": {
+        "type": "none"
+      }
+    },
+    {
+      "index": 2,
+      "frequency": 147.000,
+      "name": "DCS Test",
+      "txPower": 1,
+      "bandwidth": "wide",
+      "scrambler": true,
+      "rxTone": {
+        "type": "dcs",
+        "value": 23
+      },
+      "txTone": {
+        "type": "dcs",
+        "value": 23
+      }
+    }
+  ]
+}
