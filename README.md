@@ -206,8 +206,8 @@ QuanshengK5Tool/
 
 ```bash
 # Клонируйте репозиторий
-git clone <repository-url>
-cd QuanshengK5Tool
+git clone https://github.com/iwizard7/Quansheng_k5_flasher
+cd Quansheng_k5_flasher
 
 # Соберите проект
 xcodebuild -project QuanshengK5Tool.xcodeproj -scheme QuanshengK5Tool -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO clean build
@@ -215,6 +215,12 @@ xcodebuild -project QuanshengK5Tool.xcodeproj -scheme QuanshengK5Tool -configura
 # Скопируйте готовое приложение
 cp -R build/Build/Products/Release/QuanshengK5Tool.app ./
 ```
+
+## 🔗 Ссылки
+
+- **GitHub репозиторий**: https://github.com/iwizard7/Quansheng_k5_flasher
+- **Документация протокола**: [K5_Protocol_Documentation.md](K5_Protocol_Documentation.md)
+- **Руководство разработчика**: [DEVELOPMENT.md](DEVELOPMENT.md)
 
 ## Лицензия
 

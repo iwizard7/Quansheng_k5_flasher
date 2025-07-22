@@ -10,8 +10,8 @@
 
 ### Установка
 ```bash
-git clone <repository-url>
-cd QuanshengK5Tool
+git clone https://github.com/iwizard7/Quansheng_k5_flasher
+cd Quansheng_k5_flasher
 ./build_and_test.sh build
 ```
 
