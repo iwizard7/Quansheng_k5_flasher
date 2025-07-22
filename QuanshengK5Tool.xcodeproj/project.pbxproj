@@ -15,6 +15,11 @@
 		A1234567890123456789013I /* ChannelEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789013J /* ChannelEditorView.swift */; };
 		A1234567890123456789014K /* LogManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789014L /* LogManager.swift */; };
 		A1234567890123456789014M /* CalibrationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789014N /* CalibrationManager.swift */; };
+		A1234567890123456789015F /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789015A /* Configuration.swift */; };
+		A1234567890123456789015G /* ChannelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789015B /* ChannelsView.swift */; };
+		A1234567890123456789015H /* InfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789015C /* InfoView.swift */; };
+		A1234567890123456789015I /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789015D /* LogView.swift */; };
+		A1234567890123456789015J /* Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789015E /* Tests.swift */; };
 		A1234567890123456789013C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789013D /* Assets.xcassets */; };
 		A1234567890123456789013E /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789013F /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -32,6 +37,11 @@
 		A1234567890123456789013D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1234567890123456789013F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1234567890123456789014A /* QuanshengK5Tool.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = QuanshengK5Tool.entitlements; sourceTree = "<group>"; };
+		A1234567890123456789015A /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
+		A1234567890123456789015B /* ChannelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelsView.swift; sourceTree = "<group>"; };
+		A1234567890123456789015C /* InfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoView.swift; sourceTree = "<group>"; };
+		A1234567890123456789015D /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
+		A1234567890123456789015E /* Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,12 +60,17 @@
 			children = (
 				A1234567890123456789012B /* QuanshengK5ToolApp.swift */,
 				A1234567890123456789012D /* ContentView.swift */,
+				A1234567890123456789015A /* Configuration.swift */,
 				A1234567890123456789012F /* USBCommunication.swift */,
 				A1234567890123456789013B /* K5Protocol.swift */,
 				A1234567890123456789013H /* K5Utilities.swift */,
 				A1234567890123456789013J /* ChannelEditorView.swift */,
+				A1234567890123456789015B /* ChannelsView.swift */,
+				A1234567890123456789015C /* InfoView.swift */,
+				A1234567890123456789015D /* LogView.swift */,
 				A1234567890123456789014L /* LogManager.swift */,
 				A1234567890123456789014N /* CalibrationManager.swift */,
+				A1234567890123456789015E /* Tests.swift */,
 				A1234567890123456789013D /* Assets.xcassets */,
 				A1234567890123456789014A /* QuanshengK5Tool.entitlements */,
 				A1234567890123456789014B /* Preview Content */,
@@ -162,8 +177,13 @@
 				A1234567890123456789013A /* K5Protocol.swift in Sources */,
 				A1234567890123456789013G /* K5Utilities.swift in Sources */,
 				A1234567890123456789013I /* ChannelEditorView.swift in Sources */,
+				A1234567890123456789015G /* ChannelsView.swift in Sources */,
+				A1234567890123456789015H /* InfoView.swift in Sources */,
+				A1234567890123456789015I /* LogView.swift in Sources */,
 				A1234567890123456789014K /* LogManager.swift in Sources */,
 				A1234567890123456789014M /* CalibrationManager.swift in Sources */,
+				A1234567890123456789015F /* Configuration.swift in Sources */,
+				A1234567890123456789015J /* Tests.swift in Sources */,
 				A1234567890123456789012A /* QuanshengK5ToolApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

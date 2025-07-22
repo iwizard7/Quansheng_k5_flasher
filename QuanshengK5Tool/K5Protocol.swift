@@ -72,8 +72,9 @@ class K5Protocol {
         static let fmSettings: UInt16 = 0x1E80          // Настройки FM радио
     }
     
-    private let timeout: TimeInterval = 5.0
-    private let maxRetries = 3
+    private let timeout: TimeInterval = AppConfiguration.USB.timeout
+    private let maxRetries = AppConfiguration.USB.maxRetries
+    private let logManager = LogManager()
     
     // MARK: - Основные операции
     
@@ -84,8 +85,8 @@ class K5Protocol {
         
         // Этап 1: Инициализация связи с K5
         // Отправляем команду handshake с магическими байтами K5
-        let initData = Data([0x14, 0x05, 0x04, 0x00, 0x6a, 0x39, 0x57, 0x64])
-        let initResponse = try await sendCommand(initData, interface: interface)
+        logManager.log("Начало handshake с устройством K5", level: .info)
+        let initResponse = try await sendCommand(K5Constants.handshakeInit, interface: interface)
         
         // Проверяем ответ устройства
         guard initResponse.count >= 8 && initResponse[0] == 0x18 else {
@@ -93,16 +94,14 @@ class K5Protocol {
         }
         
         // Этап 2: Подтверждение установления связи
-        let confirmData = Data([0x14, 0x05, 0x20, 0x15, 0x75, 0x25])
-        let confirmResponse = try await sendCommand(confirmData, interface: interface)
+        let confirmResponse = try await sendCommand(K5Constants.handshakeConfirm, interface: interface)
         
         guard confirmResponse.count >= 4 && confirmResponse[0] == 0x18 else {
             throw K5ProtocolError.invalidResponse
         }
         
         // Этап 3: Финальное подтверждение готовности
-        let readyData = Data([Command.acknowledge.rawValue, 0x02, 0x00, 0x00])
-        let readyResponse = try await sendCommand(readyData, interface: interface)
+        let readyResponse = try await sendCommand(K5Constants.handshakeReady, interface: interface)
         
         guard readyResponse.count >= 4 && readyResponse[0] == Command.acknowledge.rawValue else {
             throw K5ProtocolError.invalidResponse

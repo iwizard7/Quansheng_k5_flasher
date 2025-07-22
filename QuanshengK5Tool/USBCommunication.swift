@@ -14,6 +14,7 @@ class USBCommunicationManager: ObservableObject {
     private var interfaceInterface: IOUSBInterfaceInterface300?
     private var serialPortDescriptor: Int32 = -1
     private var k5Protocol = K5Protocol()
+    private var logManager = LogManager()
     var onConnectionStatusChanged: ((Bool) -> Void)?
     
     // USB VID/PID для Quansheng K5 (актуальные значения)
@@ -88,11 +89,11 @@ class USBCommunicationManager: ObservableObject {
     }
     
     func connectToK5(port: SerialPort) async -> Bool {
-        print("Попытка подключения к K5 через порт: \(port.path)")
+        logManager.log("Попытка подключения к K5 через порт: \(port.path)", level: .info)
         
         // Проверяем, существует ли порт
         guard FileManager.default.fileExists(atPath: port.path) else {
-            print("Порт \(port.path) не найден")
+            logManager.log("Порт \(port.path) не найден", level: .error)
             return false
         }
         
@@ -107,9 +108,9 @@ class USBCommunicationManager: ObservableObject {
             isConnected = true
             selectedPort = port
             onConnectionStatusChanged?(true)
-            print("Успешно подключено к K5 через \(port.displayName)")
+            logManager.log("Успешно подключено к K5 через \(port.displayName)", level: .success)
         } else {
-            print("Не удалось подключиться к порту \(port.path)")
+            logManager.log("Не удалось подключиться к порту \(port.path)", level: .error)
         }
         return success
     }
