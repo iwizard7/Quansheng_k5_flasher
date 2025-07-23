@@ -15,7 +15,7 @@ class CalibrationManager {
         let savePanel = NSSavePanel()
         savePanel.title = "Сохранить калибровку батареи"
         savePanel.allowedContentTypes = [UTType.json]
-        savePanel.nameFieldStringValue = "K5_Battery_Calibration_\(deviceInfo.serialNumber).json"
+        savePanel.nameFieldStringValue = "K5_Battery_Calibration_\(deviceInfo.model).json"
         
         guard savePanel.runModal() == .OK,
               let url = savePanel.url else {
@@ -50,7 +50,7 @@ class CalibrationManager {
         let savePanel = NSSavePanel()
         savePanel.title = "Сохранить полную калибровку"
         savePanel.allowedContentTypes = [UTType.json]
-        savePanel.nameFieldStringValue = "K5_Full_Calibration_\(deviceInfo.serialNumber).json"
+        savePanel.nameFieldStringValue = "K5_Full_Calibration_\(deviceInfo.model).json"
         
         guard savePanel.runModal() == .OK,
               let url = savePanel.url else {
@@ -110,7 +110,7 @@ class CalibrationManager {
                 let calibration = try decoder.decode(CalibrationFile.self, from: data)
                 
                 logManager?.log("Калибровка загружена из JSON файла: \(url.lastPathComponent)", level: .success)
-                logManager?.log("Устройство: \(calibration.deviceInfo.model), S/N: \(calibration.deviceInfo.serialNumber)", level: .info)
+                logManager?.log("Устройство: \(calibration.deviceInfo.model)", level: .info)
                 logManager?.log("Дата создания: \(formatDate(calibration.timestamp))", level: .info)
                 
                 return (calibration.batteryCalibration, calibration.deviceInfo)
@@ -119,11 +119,9 @@ class CalibrationManager {
                 let hexString = data.map { String(format: "%02X", $0) }.joined(separator: " ")
                 let deviceInfo = K5DeviceInfo(
                     model: "Quansheng K5",
-                    serialNumber: "Unknown",
                     firmwareVersion: "Unknown",
                     bootloaderVersion: "Unknown",
-                    frequencyRange: "136-174 MHz",
-                    manufacturingDate: "Unknown"
+                    batteryVoltage: 0.0
                 )
                 
                 logManager?.log("Калибровка загружена из BIN файла: \(url.lastPathComponent)", level: .success)
@@ -175,7 +173,7 @@ class CalibrationManager {
                 )
                 
                 logManager?.log("Полная калибровка загружена из JSON файла: \(url.lastPathComponent)", level: .success)
-                logManager?.log("Устройство: \(fullCalibration.deviceInfo.model), S/N: \(fullCalibration.deviceInfo.serialNumber)", level: .info)
+                logManager?.log("Устройство: \(fullCalibration.deviceInfo.model)", level: .info)
                 logManager?.log("Дата создания: \(formatDate(fullCalibration.timestamp))", level: .info)
                 
                 return (calibrationData, fullCalibration.deviceInfo)
@@ -190,11 +188,9 @@ class CalibrationManager {
                 
                 let deviceInfo = K5DeviceInfo(
                     model: "Quansheng K5",
-                    serialNumber: "Unknown",
                     firmwareVersion: "Unknown",
                     bootloaderVersion: "Unknown",
-                    frequencyRange: "136-174 MHz",
-                    manufacturingDate: "Unknown"
+                    batteryVoltage: 0.0
                 )
                 
                 logManager?.log("Полная калибровка загружена из BIN файла: \(url.lastPathComponent)", level: .success)
@@ -214,7 +210,7 @@ class CalibrationManager {
         let savePanel = NSSavePanel()
         savePanel.title = "Сохранить калибровку батареи в BIN"
         savePanel.allowedContentTypes = [UTType.data]
-        savePanel.nameFieldStringValue = "K5_Battery_Calibration_\(deviceInfo.serialNumber).bin"
+        savePanel.nameFieldStringValue = "K5_Battery_Calibration_\(deviceInfo.model).bin"
         
         guard savePanel.runModal() == .OK,
               let url = savePanel.url else {

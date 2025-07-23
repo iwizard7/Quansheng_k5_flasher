@@ -250,5 +250,5 @@ extension DateFormatter {
 }
 
 #Preview {
-    LogView(logManager: LogManager())
+    LogView(logManager: LogManager.shared)
 }

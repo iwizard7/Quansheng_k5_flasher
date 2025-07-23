@@ -4,7 +4,7 @@ import Foundation
 
 class TestRunner {
     private var tests: [Test] = []
-    private let logManager = LogManager()
+    private let logManager = LogManager.shared
     
     func addTest(_ test: Test) {
         tests.append(test)

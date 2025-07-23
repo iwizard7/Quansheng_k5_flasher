@@ -2,8 +2,12 @@ import Foundation
 import SwiftUI
 
 class LogManager: ObservableObject {
+    static let shared = LogManager()
+    
     @Published var logEntries: [LogEntry] = []
     private let maxLogEntries = 1000
+    
+    private init() {}
     
     func log(_ message: String, level: LogLevel = .info) {
         let entry = LogEntry(

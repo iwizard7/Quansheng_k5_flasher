@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @StateObject private var usbManager = USBCommunicationManager()
+    @StateObject private var logManager = LogManager.shared
     @State private var selectedTab = 0
     @State private var connectionStatus = "Не подключено"
     @State private var isConnected = false
@@ -99,7 +100,7 @@ struct ContentView: View {
                     case 4:
                         InfoView(usbManager: usbManager)
                     case 5:
-                        LogView(logManager: LogManager())
+                        LogView(logManager: logManager)
                     default:
                         BatteryCalibrationView(usbManager: usbManager)
                     }
@@ -279,7 +280,7 @@ struct BatteryCalibrationView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var alertTitle = "Ошибка"
-    @State private var logManager = LogManager()
+    @State private var logManager = LogManager.shared
     @State private var calibrationManager: CalibrationManager?
 
     
@@ -295,8 +296,38 @@ struct BatteryCalibrationView: View {
                     .progressViewStyle(LinearProgressViewStyle())
             }
             
-            // Вкладки калибровки
-            TabView(selection: $selectedCalibrationTab) {
+            // Выбор типа калибровки
+            HStack {
+                Button(action: { selectedCalibrationTab = 0 }) {
+                    HStack {
+                        Image(systemName: "battery.100")
+                        Text("Калибровка батареи")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(selectedCalibrationTab == 0 ? Color.blue : Color.gray.opacity(0.2))
+                    .foregroundColor(selectedCalibrationTab == 0 ? .white : .primary)
+                    .cornerRadius(8)
+                }
+                
+                Button(action: { selectedCalibrationTab = 1 }) {
+                    HStack {
+                        Image(systemName: "cpu")
+                        Text("Полная калибровка")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(selectedCalibrationTab == 1 ? Color.blue : Color.gray.opacity(0.2))
+                    .foregroundColor(selectedCalibrationTab == 1 ? .white : .primary)
+                    .cornerRadius(8)
+                }
+                
+                Spacer()
+            }
+            .padding(.bottom, 10)
+            
+            // Содержимое калибровки
+            if selectedCalibrationTab == 0 {
                 // Простая калибровка батареи
                 VStack(alignment: .leading, spacing: 15) {
                     VStack(alignment: .leading, spacing: 10) {
@@ -345,11 +376,7 @@ struct BatteryCalibrationView: View {
                             .frame(minHeight: 200)
                     }
                 }
-                .tabItem {
-                    Text("Батарея")
-                }
-                .tag(0)
-                
+            } else {
                 // Полная калибровка
                 VStack(alignment: .leading, spacing: 15) {
                     VStack(alignment: .leading, spacing: 10) {
@@ -407,12 +434,7 @@ struct BatteryCalibrationView: View {
                         }
                     }
                 }
-                .tabItem {
-                    Text("Полная")
-                }
-                .tag(1)
             }
-            .frame(minHeight: 300)
             
             if isCalibrating {
                 HStack {
@@ -427,7 +449,7 @@ struct BatteryCalibrationView: View {
         .padding()
         .onAppear {
             if calibrationManager == nil {
-                calibrationManager = CalibrationManager(logManager: logManager)
+                calibrationManager = CalibrationManager(logManager: LogManager.shared)
             }
         }
         .alert(alertTitle, isPresented: $showingAlert) {
@@ -491,11 +513,9 @@ struct BatteryCalibrationView: View {
         // Получаем информацию об устройстве
         let deviceInfo = K5DeviceInfo(
             model: "Quansheng K5",
-            serialNumber: usbManager.selectedPort?.name ?? "Unknown",
             firmwareVersion: "Unknown",
             bootloaderVersion: "Unknown",
-            frequencyRange: "136-174 MHz",
-            manufacturingDate: "Unknown"
+            batteryVoltage: 0.0
         )
         
         let success = calibrationManager.saveCalibrationToFile(calibrationData, deviceInfo: deviceInfo)
@@ -511,7 +531,7 @@ struct BatteryCalibrationView: View {
         
         if let (loadedCalibration, deviceInfo) = calibrationManager.loadCalibrationFromFile() {
             calibrationData = loadedCalibration
-            showAlert(title: "Успех", message: "Калибровка батареи загружена из файла\nУстройство: \(deviceInfo.model)\nS/N: \(deviceInfo.serialNumber)")
+            showAlert(title: "Успех", message: "Калибровка батареи загружена из файла\nУстройство: \(deviceInfo.model)")
         }
     }
     
@@ -521,11 +541,9 @@ struct BatteryCalibrationView: View {
         // Получаем информацию об устройстве
         let deviceInfo = K5DeviceInfo(
             model: "Quansheng K5",
-            serialNumber: usbManager.selectedPort?.name ?? "Unknown",
             firmwareVersion: "Unknown",
             bootloaderVersion: "Unknown",
-            frequencyRange: "136-174 MHz",
-            manufacturingDate: "Unknown"
+            batteryVoltage: 0.0
         )
         
         let success = calibrationManager.saveFullCalibrationToFile(fullCalibration, deviceInfo: deviceInfo)
@@ -541,7 +559,7 @@ struct BatteryCalibrationView: View {
         
         if let (loadedCalibration, deviceInfo) = calibrationManager.loadFullCalibrationFromFile() {
             fullCalibration = loadedCalibration
-            showAlert(title: "Успех", message: "Полная калибровка загружена из файла\nУстройство: \(deviceInfo.model)\nS/N: \(deviceInfo.serialNumber)")
+            showAlert(title: "Успех", message: "Полная калибровка загружена из файла\nУстройство: \(deviceInfo.model)")
         }
     }
     
@@ -551,11 +569,9 @@ struct BatteryCalibrationView: View {
         // Получаем информацию об устройстве
         let deviceInfo = K5DeviceInfo(
             model: "Quansheng K5",
-            serialNumber: usbManager.selectedPort?.name ?? "Unknown",
             firmwareVersion: "Unknown",
             bootloaderVersion: "Unknown",
-            frequencyRange: "136-174 MHz",
-            manufacturingDate: "Unknown"
+            batteryVoltage: 0.0
         )
         
         let success = calibrationManager.saveBatteryCalibrationToBinFile(calibrationData, deviceInfo: deviceInfo)

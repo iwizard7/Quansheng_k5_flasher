@@ -13,8 +13,9 @@ class USBCommunicationManager: ObservableObject {
     private var deviceInterface: IOUSBDeviceInterface300?
     private var interfaceInterface: IOUSBInterfaceInterface300?
     private var serialPortDescriptor: Int32 = -1
-    private var k5Protocol = K5Protocol()
-    private var logManager = LogManager()
+    private var k5Protocol: K5Protocol!
+    private var logManager = LogManager.shared
+    
     var onConnectionStatusChanged: ((Bool) -> Void)?
     
     // USB VID/PID для Quansheng K5 (актуальные значения)
@@ -34,6 +35,7 @@ class USBCommunicationManager: ObservableObject {
     ]
     
     init() {
+        self.k5Protocol = K5Protocol(usbManager: self)
         refreshDevices()
         refreshSerialPorts()
     }
@@ -97,18 +99,46 @@ class USBCommunicationManager: ObservableObject {
             return false
         }
         
-        // Имитируем успешное подключение для тестирования UI
-        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 секунды
-        
-        // Для демонстрации UI временно всегда возвращаем успех
-        // В реальной реализации здесь должно быть: let success = await openSerialPort(port)
-        let success = true
+        // Пытаемся открыть серийный порт
+        let success = await openSerialPort(port)
         
         if success {
             isConnected = true
             selectedPort = port
             onConnectionStatusChanged?(true)
             logManager.log("Успешно подключено к K5 через \(port.displayName)", level: .success)
+            
+            // Сначала тестируем базовую связь с устройством
+            logManager.log("🔍 Тестирование связи с устройством...", level: .info)
+            do {
+                let communicationWorks = try await k5Protocol.testCommunication(interface: interfaceInterface)
+                if communicationWorks {
+                    logManager.log("✅ Базовая связь с устройством работает", level: .success)
+                } else {
+                    logManager.log("⚠️ Базовая связь не работает, но пробуем handshake", level: .warning)
+                }
+            } catch {
+                logManager.log("❌ Ошибка тестирования связи: \(error.localizedDescription)", level: .warning)
+            }
+            
+            // Пытаемся выполнить handshake с устройством
+            logManager.log("🤝 Выполнение handshake с устройством UV-K5...", level: .info)
+            do {
+                try await k5Protocol.performHandshake(interface: interfaceInterface)
+                logManager.log("✅ Handshake с устройством UV-K5 выполнен успешно", level: .success)
+            } catch {
+                logManager.log("❌ Ошибка handshake с устройством: \(error.localizedDescription)", level: .error)
+                
+                // Дополнительная диагностика
+                logManager.log("🔧 Дополнительная диагностика:", level: .info)
+                logManager.log("   - Порт: \(port.path)", level: .info)
+                logManager.log("   - Имя: \(port.name)", level: .info)
+                logManager.log("   - Описание: \(port.description)", level: .info)
+                logManager.log("   - Подключен: \(isConnected)", level: .info)
+                
+                // Не отключаемся, возможно устройство все равно будет работать
+                logManager.log("⚠️ Продолжаем работу без handshake", level: .warning)
+            }
         } else {
             logManager.log("Не удалось подключиться к порту \(port.path)", level: .error)
         }
@@ -182,7 +212,7 @@ class USBCommunicationManager: ObservableObject {
     
     // MARK: - Методы работы с серийным портом
     
-    private func writeToSerial(_ data: Data) async -> Bool {
+    func writeToSerial(_ data: Data) async -> Bool {
         guard serialPortDescriptor != -1 else {
             print("Серийный порт не открыт")
             return false
@@ -201,7 +231,7 @@ class USBCommunicationManager: ObservableObject {
         }
     }
     
-    private func readFromSerial(timeout: TimeInterval = 1.0) async -> Data? {
+    func readFromSerial(timeout: TimeInterval = 1.0) async -> Data? {
         guard serialPortDescriptor != -1 else {
             print("Серийный порт не открыт")
             return nil
@@ -248,33 +278,37 @@ class USBCommunicationManager: ObservableObject {
    // MARK: - Операции с батареей
     
     func readBatteryCalibration() async -> String {
-        guard isConnected else { return "" }
-        
-        // Команда для чтения калибровки батареи
-        let calibrationCommand = Data([0x02, 0x08, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00])
-        
-        if let response = await sendCommand(calibrationCommand) {
-            if response.count >= 20 {
-                let calibrationData = response.dropFirst(4).prefix(16)
-                return formatCalibrationData(Data(calibrationData))
-            }
+        guard isConnected else { 
+            logManager.log("Устройство не подключено", level: .error)
+            return "" 
         }
         
-        return "Ошибка чтения калибровки"
+        do {
+            let calibrationData = try await k5Protocol.readBatteryCalibration(interface: interfaceInterface)
+            let formattedData = formatCalibrationData(calibrationData)
+            logManager.log("Калибровка батареи успешно считана", level: .success)
+            return formattedData
+        } catch {
+            let errorMsg = "Ошибка чтения калибровки батареи: \(error.localizedDescription)"
+            logManager.log(errorMsg, level: .error)
+            return "Ошибка чтения калибровки"
+        }
     }
     
     func writeBatteryCalibration(_ calibrationData: String) async -> Bool {
-        guard isConnected else { return false }
+        guard isConnected else { 
+            logManager.log("Устройство не подключено", level: .error)
+            return false 
+        }
         
         do {
             let data = parseCalibrationData(calibrationData)
             try await k5Protocol.writeBatteryCalibration(data, interface: interfaceInterface)
-            print("Калибровка батареи записана в рацию")
+            logManager.log("Калибровка батареи успешно записана в рацию", level: .success)
             return true
         } catch {
-            let errorMsg = "Ошибка записи калибровки батареи: \(error)"
-            print(errorMsg)
-            print(errorMsg)
+            let errorMsg = "Ошибка записи калибровки батареи: \(error.localizedDescription)"
+            logManager.log(errorMsg, level: .error)
             return false
         }
     }
@@ -332,24 +366,37 @@ class USBCommunicationManager: ObservableObject {
     // MARK: - Операции с каналами
     
     func readChannels() async -> [K5Channel] {
-        guard isConnected else { return [] }
+        guard isConnected else { 
+            logManager.log("Устройство не подключено для чтения каналов", level: .error)
+            return [] 
+        }
         
         do {
-            return try await k5Protocol.readChannels(interface: interfaceInterface)
+            logManager.log("Начинаем чтение каналов из рации...", level: .info)
+            let channels = try await k5Protocol.readChannels(interface: interfaceInterface)
+            logManager.log("Успешно считано \(channels.count) каналов", level: .success)
+            return channels
         } catch {
-            print("Ошибка чтения каналов: \(error)")
+            let errorMsg = "Ошибка чтения каналов: \(error.localizedDescription)"
+            logManager.log(errorMsg, level: .error)
             return []
         }
     }
     
     func writeChannels(_ channels: [K5Channel]) async -> Bool {
-        guard isConnected else { return false }
+        guard isConnected else { 
+            logManager.log("Устройство не подключено для записи каналов", level: .error)
+            return false 
+        }
         
         do {
+            logManager.log("Начинаем запись \(channels.count) каналов в рацию...", level: .info)
             try await k5Protocol.writeChannels(channels, interface: interfaceInterface)
+            logManager.log("Каналы успешно записаны в рацию", level: .success)
             return true
         } catch {
-            print("Ошибка записи каналов: \(error)")
+            let errorMsg = "Ошибка записи каналов: \(error.localizedDescription)"
+            logManager.log(errorMsg, level: .error)
             return false
         }
     }
@@ -357,24 +404,35 @@ class USBCommunicationManager: ObservableObject {
     // MARK: - Расширенная калибровка
     
     func readFullCalibration() async -> K5CalibrationData {
-        guard isConnected else { return K5CalibrationData() }
+        guard isConnected else { 
+            logManager.log("Устройство не подключено", level: .error)
+            return K5CalibrationData() 
+        }
         
         do {
-            return try await k5Protocol.readFullCalibration(interface: interfaceInterface)
+            let calibration = try await k5Protocol.readFullCalibration(interface: interfaceInterface)
+            logManager.log("Полная калибровка успешно считана", level: .success)
+            return calibration
         } catch {
-            print("Ошибка чтения полной калибровки: \(error)")
+            let errorMsg = "Ошибка чтения полной калибровки: \(error.localizedDescription)"
+            logManager.log(errorMsg, level: .error)
             return K5CalibrationData()
         }
     }
     
     func writeFullCalibration(_ calibration: K5CalibrationData) async -> Bool {
-        guard isConnected else { return false }
+        guard isConnected else { 
+            logManager.log("Устройство не подключено", level: .error)
+            return false 
+        }
         
         do {
             try await k5Protocol.writeFullCalibration(calibration, interface: interfaceInterface)
+            logManager.log("Полная калибровка успешно записана в рацию", level: .success)
             return true
         } catch {
-            print("Ошибка записи полной калибровки: \(error)")
+            let errorMsg = "Ошибка записи полной калибровки: \(error.localizedDescription)"
+            logManager.log(errorMsg, level: .error)
             return false
         }
     }
@@ -546,33 +604,49 @@ class USBCommunicationManager: ObservableObject {
     
     func readDeviceInfo() async -> K5DeviceInfo {
         guard isConnected else { 
-            print("Нет соединения с устройством для чтения информации")
+            logManager.log("❌ Нет соединения с устройством для чтения информации", level: .error)
             return K5DeviceInfo() 
         }
         
-        print("Чтение информации об устройстве...")
+        logManager.log("📋 Чтение информации об устройстве UV-K5...", level: .info)
         
         var deviceInfo = K5DeviceInfo()
         
+        // Сначала тестируем связь
+        logManager.log("🧪 Тестирование связи перед чтением информации...", level: .debug)
         do {
-            // Читаем версию прошивки
-            deviceInfo.firmwareVersion = await readFirmwareVersion()
-            
-            // Читаем серийный номер
-            deviceInfo.serialNumber = await readSerialNumber()
-            
-            // Читаем модель устройства
-            deviceInfo.model = await readDeviceModel()
-            
-            // Читаем версию загрузчика
-            deviceInfo.bootloaderVersion = await readBootloaderVersion()
-            
-            // Читаем дату производства
-            deviceInfo.manufacturingDate = await readManufacturingDate()
-            
-            print("Информация об устройстве прочитана успешно")
+            let communicationWorks = try await k5Protocol.testCommunication(interface: interfaceInterface)
+            if communicationWorks {
+                logManager.log("✅ Связь с устройством работает", level: .success)
+            } else {
+                logManager.log("⚠️ Проблемы со связью, но продолжаем", level: .warning)
+            }
         } catch {
-            print("Ошибка чтения информации об устройстве: \(error)")
+            logManager.log("❌ Ошибка тестирования связи: \(error.localizedDescription)", level: .warning)
+        }
+        
+        // Читаем информацию по частям с обработкой ошибок
+        logManager.log("📖 Чтение версии прошивки...", level: .debug)
+        deviceInfo.firmwareVersion = await readFirmwareVersion()
+        
+        logManager.log("📖 Чтение версии загрузчика...", level: .debug)
+        deviceInfo.bootloaderVersion = await readBootloaderVersion()
+        
+        logManager.log("🔋 Чтение вольтажа батареи...", level: .debug)
+        deviceInfo.batteryVoltage = await readBatteryVoltage()
+        
+        // Устанавливаем модель устройства
+        deviceInfo.model = "Quansheng UV-K5"
+        
+        // Проверяем, что хотя бы что-то прочиталось
+        let hasValidData = deviceInfo.firmwareVersion != "Неизвестно" || 
+                          deviceInfo.bootloaderVersion != "Неизвестно" || 
+                          deviceInfo.batteryVoltage > 0.0
+        
+        if hasValidData {
+            logManager.log("✅ Информация об устройстве прочитана успешно", level: .success)
+        } else {
+            logManager.log("⚠️ Не удалось прочитать информацию об устройстве", level: .warning)
         }
         
         return deviceInfo
@@ -626,6 +700,69 @@ class USBCommunicationManager: ObservableObject {
         return formatter.string(from: Date())
     }
     
+    func readBatteryVoltage() async -> Double {
+        guard isConnected else { 
+            logManager.log("❌ Устройство не подключено для чтения вольтажа", level: .error)
+            return 0.0 
+        }
+        
+        logManager.log("🔋 Начинаем чтение вольтажа батареи UV-K5...", level: .info)
+        
+        // Дополнительная диагностика перед чтением
+        logManager.log("🔧 Диагностика перед чтением вольтажа:", level: .debug)
+        logManager.log("   - Порт подключен: \(isConnected)", level: .debug)
+        logManager.log("   - Дескриптор порта: \(serialPortDescriptor)", level: .debug)
+        logManager.log("   - Interface доступен: \(interfaceInterface != nil)", level: .debug)
+        
+        do {
+            // Сначала тестируем связь
+            logManager.log("🧪 Тестирование связи перед чтением вольтажа...", level: .debug)
+            let communicationWorks = try await k5Protocol.testCommunication(interface: interfaceInterface)
+            
+            if !communicationWorks {
+                logManager.log("⚠️ Связь не работает, но пробуем читать вольтаж", level: .warning)
+            }
+            
+            let voltage = try await k5Protocol.readBatteryVoltage(interface: interfaceInterface)
+            logManager.log("✅ Вольтаж батареи прочитан: \(String(format: "%.3f", voltage)) В", level: .success)
+            return voltage
+        } catch let error as K5ProtocolError {
+            // Детальная обработка ошибок протокола
+            switch error {
+            case .deviceNotConnected:
+                logManager.log("❌ Устройство не подключено", level: .error)
+            case .communicationError:
+                logManager.log("❌ Ошибка связи с устройством", level: .error)
+            case .invalidResponse:
+                logManager.log("❌ Неверный ответ от устройства", level: .error)
+            case .checksumError:
+                logManager.log("❌ Ошибка контрольной суммы", level: .error)
+            case .timeout:
+                logManager.log("❌ Таймаут при чтении", level: .error)
+            case .unsupportedOperation:
+                logManager.log("❌ Неподдерживаемая операция", level: .error)
+            }
+            
+            logManager.log("🔧 Дополнительная диагностика ошибки:", level: .error)
+            logManager.log("   - Тип ошибки: \(error)", level: .error)
+            logManager.log("   - Описание: \(error.localizedDescription)", level: .error)
+            
+            return 0.0
+        } catch {
+            logManager.log("❌ Неожиданная ошибка чтения вольтажа батареи: \(error.localizedDescription)", level: .error)
+            logManager.log("🔧 Тип ошибки: \(type(of: error))", level: .error)
+            
+            // Пробуем получить более детальную информацию об ошибке
+            if let nsError = error as NSError? {
+                logManager.log("🔧 NSError код: \(nsError.code)", level: .error)
+                logManager.log("🔧 NSError домен: \(nsError.domain)", level: .error)
+                logManager.log("🔧 NSError userInfo: \(nsError.userInfo)", level: .error)
+            }
+            
+            return 0.0
+        }
+    }
+    
     // MARK: - Методы работы с файлами калибровки (будут добавлены позже)
 }
 
@@ -659,11 +796,9 @@ struct K5Settings {
 
 struct K5DeviceInfo: Codable {
     var model: String = "Quansheng K5"
-    var serialNumber: String = "Неизвестно"
     var firmwareVersion: String = "Неизвестно"
     var bootloaderVersion: String = "Неизвестно"
-    var frequencyRange: String = "136-174 MHz"
-    var manufacturingDate: String = "Неизвестно"
+    var batteryVoltage: Double = 0.0
 }
 
 struct K5Channel: Hashable {
@@ -714,7 +849,7 @@ struct CalibrationFileData: Codable {
         return """
         Калибровка Quansheng K5
         Модель: \(deviceInfo.model)
-        Серийный номер: \(deviceInfo.serialNumber)
+        Вольтаж батареи: \(String(format: "%.2f В", deviceInfo.batteryVoltage))
         Версия прошивки: \(deviceInfo.firmwareVersion)
         Дата экспорта: \(DateFormatter.localizedString(from: exportDate, dateStyle: .medium, timeStyle: .short))
         """

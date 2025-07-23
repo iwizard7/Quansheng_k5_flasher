@@ -28,9 +28,7 @@ struct InfoView: View {
                         GroupBox("Основная информация") {
                             VStack(alignment: .leading, spacing: 10) {
                                 InfoRow(label: "Модель", value: deviceInfo.model)
-                                InfoRow(label: "Серийный номер", value: deviceInfo.serialNumber)
-                                InfoRow(label: "Диапазон частот", value: deviceInfo.frequencyRange)
-                                InfoRow(label: "Дата производства", value: deviceInfo.manufacturingDate)
+                                InfoRow(label: "Вольтаж батареи", value: String(format: "%.2f В", deviceInfo.batteryVoltage))
                             }
                             .padding()
                         }
@@ -69,19 +67,7 @@ struct InfoView: View {
                             .padding()
                         }
                         
-                        // Технические характеристики
-                        GroupBox("Технические характеристики") {
-                            VStack(alignment: .leading, spacing: 10) {
-                                InfoRow(label: "Тип модуляции", value: "FM")
-                                InfoRow(label: "Полоса пропускания", value: "12.5/25 kHz")
-                                InfoRow(label: "Мощность передачи", value: "1/2/5 Вт")
-                                InfoRow(label: "Количество каналов", value: "200")
-                                InfoRow(label: "Поддержка CTCSS/DCS", value: "Да")
-                                InfoRow(label: "FM радио", value: "Да")
-                                InfoRow(label: "Сканирование", value: "Да")
-                            }
-                            .padding()
-                        }
+
                         
                         // Кнопки действий
                         HStack {
@@ -95,7 +81,7 @@ struct InfoView: View {
                             Button("Экспорт информации") {
                                 exportDeviceInfo()
                             }
-                            .disabled(deviceInfo.serialNumber == "Неизвестно")
+                            .disabled(deviceInfo.model == "Неизвестно")
                         }
                     }
                 }
@@ -129,7 +115,7 @@ struct InfoView: View {
         let savePanel = NSSavePanel()
         savePanel.title = "Экспорт информации об устройстве"
         savePanel.allowedContentTypes = [.json, .plainText]
-        savePanel.nameFieldStringValue = "K5_Device_Info_\(deviceInfo.serialNumber)"
+        savePanel.nameFieldStringValue = "K5_Device_Info_\(deviceInfo.model)"
         
         if savePanel.runModal() == .OK, let url = savePanel.url {
             do {
@@ -165,9 +151,7 @@ struct InfoView: View {
         
         Основная информация:
         - Модель: \(deviceInfo.model)
-        - Серийный номер: \(deviceInfo.serialNumber)
-        - Диапазон частот: \(deviceInfo.frequencyRange)
-        - Дата производства: \(deviceInfo.manufacturingDate)
+        - Вольтаж батареи: \(String(format: "%.2f В", deviceInfo.batteryVoltage))
         
         Прошивка:
         - Версия прошивки: \(deviceInfo.firmwareVersion)
@@ -177,15 +161,6 @@ struct InfoView: View {
         - Статус: \(usbManager.isConnected ? "Подключено" : "Не подключено")
         - Порт: \(usbManager.selectedPort?.displayName ?? "Не выбран")
         - Доступно портов: \(usbManager.availablePorts.count)
-        
-        Технические характеристики:
-        - Тип модуляции: FM
-        - Полоса пропускания: 12.5/25 kHz
-        - Мощность передачи: 1/2/5 Вт
-        - Количество каналов: 200
-        - Поддержка CTCSS/DCS: Да
-        - FM радио: Да
-        - Сканирование: Да
         
         Дата экспорта: \(formatter.string(from: Date()))
         """
