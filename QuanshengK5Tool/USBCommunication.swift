@@ -804,10 +804,12 @@ struct K5DeviceInfo: Codable {
 struct K5Channel: Hashable {
     var index: Int = 0
     var frequency: Double = 145.0
+    var txFrequency: Double = 145.0
     var name: String = ""
     var txPower: Int = 1
     var bandwidth: K5Bandwidth = .narrow
     var scrambler: Bool = false
+    var scanAdd: Bool = true
     var rxTone: K5Tone = .none
     var txTone: K5Tone = .none
 }

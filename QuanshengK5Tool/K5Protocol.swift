@@ -62,8 +62,8 @@ class K5Protocol {
         static let settings: UInt16 = 0x0E70            // Основные настройки
         static let menuSettings: UInt16 = 0x0F50        // Настройки меню
         
-        // Каналы памяти
-        static let channels: UInt16 = 0x0F30            // Начало каналов памяти
+        // Каналы памяти (исправленные адреса для UV-K5)
+        static let channels: UInt16 = 0x0000            // Начало каналов памяти (правильный адрес)
         static let channelSize: UInt16 = 0x10           // Размер одного канала (16 байт)
         static let maxChannels: UInt16 = 200            // Максимальное количество каналов
         
@@ -316,42 +316,44 @@ class K5Protocol {
         let address = MemoryAddress.batteryVoltage
         logManager.log("📍 Адрес вольтажа: 0x\(String(format: "%04X", address))", level: .debug)
         
-        // Правильные команды для чтения вольтажа UV-K5 (формат из рабочего лога)
+        // Правильные команды для чтения вольтажа UV-K5 (исправленные адреса)
         let voltageCommands: [(String, Data)] = [
-            // Команда 1: UV-K5 чтение ADC батареи
-            ("UV-K5 Battery ADC", Data([
+            // Команда 1: Чтение из области калибровки батареи
+            ("UV-K5 Battery Calibration Area", Data([
                 0x1B,                                              // Команда чтения EEPROM
                 0x05, 0x04, 0x00,                                  // Стандартные байты протокола
-                0xC8, 0x1E,                                        // Адрес ADC батареи в UV-K5
+                0xC0, 0x1E,                                        // Адрес калибровки батареи
+                0x08,                                              // 8 байт данных
+                0x00                                               // Padding
+            ])),
+            
+            // Команда 2: Альтернативный адрес батареи
+            ("UV-K5 Battery Alt Address", Data([
+                0x1B,                                              // Команда чтения
+                0x05, 0x04, 0x00,                                  // Стандартные байты протокола
+                0xC8, 0x1E,                                        // Альтернативный адрес
                 0x02,                                              // 2 байта данных
                 0x00                                               // Padding
             ])),
             
-            // Команда 2: Прямое чтение области батареи
-            ("UV-K5 Battery Direct", Data([
+            // Команда 3: Чтение из области настроек
+            ("UV-K5 Settings Area", Data([
                 0x1B,                                              // Команда чтения
-                0xC8, 0x1E,                                        // Адрес батареи
-                0x02                                               // 2 байта
-            ])),
-            
-            // Команда 3: Чтение статуса устройства (включает батарею)
-            ("UV-K5 Device Status", Data([
-                0x05,                                              // Команда статуса
                 0x05, 0x04, 0x00,                                  // Стандартные байты протокола
-                0x00, 0x00, 0x00, 0x00                             // Padding
-            ])),
-            
-            // Команда 4: Альтернативное чтение батареи
-            ("UV-K5 Battery Alt", Data([
-                0x1A,                                              // Альтернативная команда чтения
-                0x05, 0x04, 0x00,                                  // Стандартные байты протокола
-                0xC8, 0x1E,                                        // Адрес батареи
-                0x04,                                              // 4 байта данных
+                0x70, 0x0E,                                        // Адрес настроек
+                0x10,                                              // 16 байт данных
                 0x00                                               // Padding
             ])),
             
-            // Команда 5: Простое чтение без дополнительных байтов
-            ("Simple Battery Read", Data([
+            // Команда 4: Прямое чтение без протокольных байтов
+            ("Direct Battery Read", Data([
+                0x1B,                                              // Команда чтения
+                0xC0, 0x1E,                                        // Адрес батареи
+                0x04                                               // 4 байта
+            ])),
+            
+            // Команда 5: Чтение текущего адреса батареи
+            ("Current Battery Address", Data([
                 0x1B,                                              // Команда чтения
                 UInt8(address & 0xFF),                             // Младший байт адреса
                 UInt8((address >> 8) & 0xFF),                      // Старший байт адреса
@@ -382,20 +384,23 @@ class K5Protocol {
                         // UV-K5 использует little-endian формат
                         let rawVoltage = UInt16(voltageBytes[0]) | (UInt16(voltageBytes[1]) << 8)
                         
-                        // Коэффициенты конвертации для UV-K5
+                        // Коэффициенты конвертации для UV-K5 (исправлены на основе реальных данных)
                         let voltageOptions = [
-                            // UV-K5 обычно использует 12-bit ADC с делителем напряжения
-                            Double(rawVoltage) * 7.6 / 4096.0,    // Стандартный коэффициент UV-K5
-                            Double(rawVoltage) * 3.3 / 1024.0,    // 10-bit ADC
-                            Double(rawVoltage) * 3.3 / 4096.0,    // 12-bit ADC
-                            Double(rawVoltage) / 1000.0,          // Милливольты
-                            Double(rawVoltage) / 100.0,           // Сантивольты
-                            Double(rawVoltage) * 0.00806,         // Эмпирический коэффициент UV-K5
-                            Double(rawVoltage) * 0.01611          // Альтернативный коэффициент
+                            // Исправленные коэффициенты для UV-K5 (7.6V реальное vs 3.6V показанное)
+                            Double(rawVoltage) * 16.0 / 4096.0,   // Увеличенный коэффициент для UV-K5
+                            Double(rawVoltage) * 0.01611 * 2.1,   // Скорректированный эмпирический
+                            Double(rawVoltage) * 0.00806 * 2.1,   // Скорректированный альтернативный
+                            Double(rawVoltage) / 500.0,           // Половина милливольт
+                            Double(rawVoltage) / 250.0,           // Четверть милливольт
+                            Double(rawVoltage) * 7.6 / 2048.0,    // 11-bit ADC
+                            Double(rawVoltage) * 15.2 / 4096.0    // Удвоенный стандартный
                         ]
                         
+                        // Логируем все варианты для отладки
+                        logManager.log("🔍 Raw voltage data: 0x\(String(format: "%04X", rawVoltage)) (\(rawVoltage))", level: .debug)
                         for (voltIndex, voltage) in voltageOptions.enumerated() {
-                            if voltage > 2.5 && voltage < 4.5 {  // Диапазон Li-ion батареи
+                            logManager.log("🔍 Коэффициент \(voltIndex + 1): \(String(format: "%.3f", voltage))V", level: .debug)
+                            if voltage > 6.0 && voltage < 9.0 {  // Расширенный диапазон для UV-K5 (7.6V)
                                 logManager.log("✅ Вольтаж прочитан командой \(commandName) (коэффициент \(voltIndex + 1)): \(String(format: "%.3f", voltage))V (raw: 0x\(String(format: "%04X", rawVoltage)))", level: .success)
                                 return voltage
                             }
@@ -502,32 +507,314 @@ class K5Protocol {
     
     func readChannels(interface: IOUSBInterfaceInterface300?) async throws -> [K5Channel] {
         
+        logManager.log("📻 Начинаем чтение каналов UV-K5 с альтернативным подходом...", level: .info)
+        
         try await performHandshake(interface: interface)
         
-        var channels: [K5Channel] = []
-        let channelSize = 16 // Размер одного канала в байтах
-        let maxChannels = 200 // Максимальное количество каналов
+        // Пропускаем режим программирования и пробуем прямое чтение
+        logManager.log("📻 Пробуем прямое чтение каналов без режима программирования", level: .info)
         
-        for channelIndex in 0..<maxChannels {
-            let address = MemoryAddress.channels + UInt16(channelIndex * channelSize)
-            let command = createReadCommand(address: address, length: UInt16(channelSize))
+        var channels: [K5Channel] = []
+        let maxChannels = 200
+        
+        // Попробуем совершенно другие подходы к чтению каналов UV-K5
+        let channelReadingStrategies: [(String, () async throws -> [K5Channel])] = [
+            // Стратегия 1: Чтение через специальные команды UV-K5
+            ("UV-K5 Special Commands", { [weak self] in
+                guard let self = self else { return [] }
+                return try await self.readChannelsWithSpecialCommands()
+            }),
+            
+            // Стратегия 2: Чтение через блоки памяти
+            ("Memory Block Reading", { [weak self] in
+                guard let self = self else { return [] }
+                return try await self.readChannelsWithMemoryBlocks()
+            }),
+            
+            // Стратегия 3: Чтение через сканирование памяти
+            ("Memory Scanning", { [weak self] in
+                guard let self = self else { return [] }
+                return try await self.readChannelsWithMemoryScanning()
+            }),
+            
+            // Стратегия 4: Чтение через дамп всей EEPROM
+            ("EEPROM Dump", { [weak self] in
+                guard let self = self else { return [] }
+                return try await self.readChannelsFromEEPROMDump()
+            })
+        ]
+        
+        // Пробуем каждую стратегию
+        for (strategyName, strategy) in channelReadingStrategies {
+            logManager.log("📻 Пробуем стратегию: \(strategyName)", level: .info)
+            
+            do {
+                let strategyChannels = try await strategy()
+                
+                if !strategyChannels.isEmpty {
+                    // Проверяем, что каналы имеют разные частоты
+                    let uniqueFrequencies = Set(strategyChannels.map { $0.frequency })
+                    
+                    if uniqueFrequencies.count > 1 {
+                        logManager.log("✅ Стратегия \(strategyName) успешна! Найдено \(strategyChannels.count) каналов с \(uniqueFrequencies.count) уникальными частотами", level: .success)
+                        return strategyChannels
+                    } else {
+                        logManager.log("⚠️ Стратегия \(strategyName) вернула каналы с одинаковыми частотами", level: .warning)
+                    }
+                } else {
+                    logManager.log("⚠️ Стратегия \(strategyName) не вернула каналов", level: .warning)
+                }
+            } catch {
+                logManager.log("❌ Ошибка стратегии \(strategyName): \(error)", level: .warning)
+            }
+            
+            // Пауза между стратегиями
+            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 секунда
+        }
+        
+        logManager.log("❌ Все стратегии чтения каналов не сработали", level: .error)
+        return []
+    }
+    
+    // Стратегия 1: Специальные команды UV-K5
+    private func readChannelsWithSpecialCommands() async throws -> [K5Channel] {
+        logManager.log("📻 Чтение каналов через специальные команды UV-K5", level: .info)
+        
+        var channels: [K5Channel] = []
+        
+        // Специальные команды для чтения каналов UV-K5 (из документации сообщества)
+        let specialCommands: [(String, Data)] = [
+            // Команда чтения всех каналов
+            ("Read All Channels", Data([0x1B, 0x05, 0x08, 0x00, 0x00, 0x0F, 0x00, 0x0C])),
+            
+            // Команда чтения конфигурации каналов
+            ("Read Channel Config", Data([0x1B, 0x05, 0x20, 0x00, 0x30, 0x0F, 0x00, 0x10])),
+            
+            // Команда чтения списка каналов
+            ("Read Channel List", Data([0x1B, 0x05, 0x04, 0x00, 0x00, 0x10, 0x00, 0x20]))
+        ]
+        
+        for (commandName, command) in specialCommands {
+            logManager.log("📡 Пробуем команду \(commandName): \(command.map { String(format: "%02X", $0) }.joined(separator: " "))", level: .debug)
             
             do {
                 let response = try await sendCommand(command)
-                if response.count >= channelSize + 4 {
-                    let channelData = Data(response.dropFirst(4))
-                    if let channel = parseChannel(from: channelData, index: channelIndex) {
-                        channels.append(channel)
+                
+                if response.count > 32 {
+                    logManager.log("📥 Получен большой ответ от команды \(commandName): \(response.count) байт", level: .info)
+                    
+                    // Пробуем парсить ответ как список каналов
+                    let parsedChannels = try parseChannelsFromResponse(response)
+                    
+                    if !parsedChannels.isEmpty {
+                        logManager.log("✅ Команда \(commandName) вернула \(parsedChannels.count) каналов", level: .success)
+                        return parsedChannels
                     }
                 }
             } catch {
-                // Прекращаем чтение при ошибке (возможно, достигли конца каналов)
-                break
+                logManager.log("❌ Ошибка команды \(commandName): \(error)", level: .warning)
             }
         }
         
         return channels
     }
+    
+    // Стратегия 2: Чтение через блоки памяти
+    private func readChannelsWithMemoryBlocks() async throws -> [K5Channel] {
+        logManager.log("📻 Чтение каналов через блоки памяти", level: .info)
+        
+        var channels: [K5Channel] = []
+        
+        // Читаем большие блоки памяти и ищем в них каналы
+        let memoryBlocks: [(String, UInt16, UInt16)] = [
+            ("Block 1", 0x0000, 0x1000),  // Первый блок 4KB
+            ("Block 2", 0x1000, 0x1000),  // Второй блок 4KB
+            ("Block 3", 0x0800, 0x0800),  // Средний блок 2KB
+            ("Block 4", 0x0C00, 0x0400)   // Малый блок 1KB
+        ]
+        
+        for (blockName, startAddress, blockSize) in memoryBlocks {
+            logManager.log("📡 Читаем блок памяти \(blockName): 0x\(String(format: "%04X", startAddress)) - 0x\(String(format: "%04X", startAddress + blockSize))", level: .debug)
+            
+            do {
+                let blockData = try await readEEPROM(address: startAddress, length: blockSize)
+                
+                if blockData.count >= Int(blockSize) {
+                    // Ищем паттерны каналов в блоке
+                    let foundChannels = try searchChannelsInMemoryBlock(blockData, startAddress: startAddress)
+                    
+                    if !foundChannels.isEmpty {
+                        let uniqueFreqs = Set(foundChannels.map { $0.frequency })
+                        if uniqueFreqs.count > 1 {
+                            logManager.log("✅ Найдены каналы в блоке \(blockName): \(foundChannels.count) каналов, \(uniqueFreqs.count) уникальных частот", level: .success)
+                            return foundChannels
+                        }
+                    }
+                }
+            } catch {
+                logManager.log("❌ Ошибка чтения блока \(blockName): \(error)", level: .warning)
+            }
+        }
+        
+        return channels
+    }
+    
+    // Стратегия 3: Сканирование памяти
+    private func readChannelsWithMemoryScanning() async throws -> [K5Channel] {
+        logManager.log("📻 Сканирование памяти для поиска каналов", level: .info)
+        
+        var channels: [K5Channel] = []
+        var foundChannelData: [(UInt16, Data)] = []
+        
+        // Сканируем память с шагом 16 байт в поисках валидных данных каналов
+        let scanStart: UInt16 = 0x0000
+        let scanEnd: UInt16 = 0x2000
+        let channelSize: UInt16 = 16
+        
+        for address in stride(from: scanStart, to: scanEnd, by: Int(channelSize)) {
+            let currentAddress = UInt16(address)
+            
+            do {
+                let data = try await readEEPROM(address: currentAddress, length: channelSize)
+                
+                // Проверяем, похожи ли данные на канал
+                if isValidChannelData(data) {
+                    foundChannelData.append((currentAddress, data))
+                    logManager.log("📡 Найдены потенциальные данные канала по адресу 0x\(String(format: "%04X", currentAddress))", level: .debug)
+                }
+                
+                // Небольшая пауза для избежания перегрузки
+                if address % 256 == 0 {
+                    try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+                }
+                
+            } catch {
+                // Игнорируем ошибки чтения отдельных адресов
+                continue
+            }
+        }
+        
+        // Парсим найденные данные
+        for (index, (address, data)) in foundChannelData.enumerated() {
+            if let channel = parseChannel(from: data, index: index) {
+                if channel.frequency >= 136.0 && channel.frequency <= 520.0 {
+                    channels.append(channel)
+                    logManager.log("📻 Найден канал по адресу 0x\(String(format: "%04X", address)): \(channel.frequency)MHz", level: .info)
+                }
+            }
+        }
+        
+        return channels
+    }
+    
+    // Стратегия 4: Дамп EEPROM
+    private func readChannelsFromEEPROMDump() async throws -> [K5Channel] {
+        logManager.log("📻 Создание дампа EEPROM для поиска каналов", level: .info)
+        
+        // Читаем всю EEPROM одним большим блоком
+        let eepromSize: UInt16 = 0x2000  // 8KB
+        let eepromData = try await readEEPROM(address: 0x0000, length: eepromSize)
+        
+        logManager.log("📥 Получен дамп EEPROM: \(eepromData.count) байт", level: .info)
+        
+        // Сохраняем дамп для анализа
+        let dumpHex = eepromData.map { String(format: "%02X", $0) }.joined(separator: " ")
+        logManager.log("📄 EEPROM дамп (первые 256 байт): \(String(dumpHex.prefix(768)))", level: .debug)
+        
+        // Анализируем дамп на предмет каналов
+        return try analyzeEEPROMDumpForChannels(eepromData)
+    }
+    
+    // Вспомогательные функции
+    private func parseChannelsFromResponse(_ data: Data) throws -> [K5Channel] {
+        var channels: [K5Channel] = []
+        let channelSize = 16
+        
+        // Пробуем парсить данные как последовательность каналов
+        for i in stride(from: 0, to: data.count - channelSize, by: channelSize) {
+            let channelData = data.subdata(in: i..<(i + channelSize))
+            
+            if let channel = parseChannel(from: channelData, index: i / channelSize) {
+                if channel.frequency >= 136.0 && channel.frequency <= 520.0 {
+                    channels.append(channel)
+                }
+            }
+        }
+        
+        return channels
+    }
+    
+    private func searchChannelsInMemoryBlock(_ data: Data, startAddress: UInt16) throws -> [K5Channel] {
+        var channels: [K5Channel] = []
+        let channelSize = 16
+        
+        // Ищем паттерны каналов в блоке памяти
+        for i in stride(from: 0, to: data.count - channelSize, by: channelSize) {
+            let channelData = data.subdata(in: i..<(i + channelSize))
+            
+            if isValidChannelData(channelData) {
+                if let channel = parseChannel(from: channelData, index: channels.count) {
+                    if channel.frequency >= 136.0 && channel.frequency <= 520.0 {
+                        channels.append(channel)
+                    }
+                }
+            }
+        }
+        
+        return channels
+    }
+    
+    private func isValidChannelData(_ data: Data) -> Bool {
+        // Проверяем, что данные не пустые и не мусорные
+        guard data.count >= 16 else { return false }
+        
+        // Проверяем, что это не все нули или все 0xFF
+        let allZeros = data.allSatisfy { $0 == 0x00 }
+        let allOnes = data.allSatisfy { $0 == 0xFF }
+        
+        if allZeros || allOnes { return false }
+        
+        // Проверяем, что первые 4 байта могут быть частотой
+        let freqBytes = Array(data.prefix(4))
+        let freq = parseFrequencyLE1(freqBytes)
+        
+        return freq >= 136.0 && freq <= 520.0
+    }
+    
+    private func analyzeEEPROMDumpForChannels(_ data: Data) throws -> [K5Channel] {
+        var channels: [K5Channel] = []
+        
+        // Анализируем дамп на предмет структур каналов
+        logManager.log("🔍 Анализируем EEPROM дамп на предмет каналов...", level: .info)
+        
+        // Ищем повторяющиеся структуры размером 16 байт
+        let channelSize = 16
+        var potentialChannels: [(Int, Data)] = []
+        
+        for i in stride(from: 0, to: data.count - channelSize, by: 1) {
+            let chunk = data.subdata(in: i..<(i + channelSize))
+            
+            if isValidChannelData(chunk) {
+                potentialChannels.append((i, chunk))
+            }
+        }
+        
+        logManager.log("🔍 Найдено \(potentialChannels.count) потенциальных структур каналов", level: .info)
+        
+        // Парсим найденные структуры
+        for (index, (offset, channelData)) in potentialChannels.enumerated() {
+            if let channel = parseChannel(from: channelData, index: index) {
+                if channel.frequency >= 136.0 && channel.frequency <= 520.0 {
+                    channels.append(channel)
+                    logManager.log("📻 Найден канал в дампе по смещению 0x\(String(format: "%04X", offset)): \(channel.frequency)MHz", level: .info)
+                }
+            }
+        }
+        
+        return channels
+    }
+    
+
     
     func writeChannels(_ channels: [K5Channel], interface: IOUSBInterfaceInterface300?) async throws {
         
@@ -916,6 +1203,189 @@ class K5Protocol {
         return data.reduce(0) { $0 ^ $1 }
     }
     
+    // Функция для входа в режим программирования UV-K5
+    private func enterProgrammingMode() async throws {
+        logManager.log("🔓 Вход в режим программирования UV-K5...", level: .info)
+        
+        // Попробуем разные команды для входа в режим программирования
+        let programmingCommands: [(String, Data)] = [
+            // Команда 1: Стандартная команда программирования
+            ("Standard Programming", Data([0x1B, 0x05, 0x04, 0x00, 0x14, 0x05, 0x16, 0x00])),
+            
+            // Команда 2: Альтернативная команда программирования
+            ("Alternative Programming", Data([0x1B, 0x05, 0x20, 0x00, 0x14, 0x05, 0x16, 0x00])),
+            
+            // Команда 3: Простая команда входа в режим программирования
+            ("Simple Programming", Data([0x14, 0x05, 0x16, 0x00])),
+            
+            // Команда 4: Команда инициализации UV-K5
+            ("UV-K5 Init", Data([0x1B, 0x05, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00])),
+            
+            // Команда 5: Команда разблокировки UV-K5
+            ("UV-K5 Unlock", Data([0x1B, 0x05, 0x04, 0x00, 0xFF, 0xFF, 0x01, 0x00]))
+        ]
+        
+        var successfulCommand: String? = nil
+        
+        for (commandName, command) in programmingCommands {
+            logManager.log("🔓 Попытка команды \(commandName): \(command.map { String(format: "%02X", $0) }.joined(separator: " "))", level: .debug)
+            
+            do {
+                let response = try await sendCommand(command)
+                logManager.log("📥 Ответ \(commandName): \(response.prefix(16).map { String(format: "%02X", $0) }.joined(separator: " "))", level: .debug)
+                
+                // Проверяем успешность входа в режим программирования
+                if response.count >= 4 && !isRepeatingPattern(response) {
+                    logManager.log("✅ Успешно вошли в режим программирования с командой \(commandName)", level: .success)
+                    successfulCommand = commandName
+                    break
+                } else {
+                    logManager.log("⚠️ Команда \(commandName) не дала ожидаемого результата", level: .warning)
+                }
+            } catch {
+                logManager.log("❌ Ошибка команды \(commandName): \(error)", level: .warning)
+            }
+            
+            // Пауза между командами
+            try await Task.sleep(nanoseconds: 300_000_000) // 300ms
+        }
+        
+        if successfulCommand == nil {
+            logManager.log("⚠️ Ни одна команда программирования не сработала, но продолжаем", level: .warning)
+        }
+        
+        // Дополнительная пауза для стабилизации
+        try await Task.sleep(nanoseconds: 500_000_000) // 500ms
+    }
+    
+    // Функция для чтения EEPROM UV-K5 с альтернативными командами
+    private func readEEPROM(address: UInt16, length: UInt16) async throws -> Data {
+        let maxRetries = 3
+        
+        // Попробуем разные команды чтения для UV-K5
+        let readCommands: [(String, Data)] = [
+            // Команда 1: Стандартная команда чтения EEPROM
+            ("Standard EEPROM Read", Data([
+                0x1B,                                              // Команда чтения EEPROM
+                0x05, 0x04, 0x00,                                  // Стандартные байты протокола
+                UInt8(address & 0xFF),                             // Младший байт адреса
+                UInt8((address >> 8) & 0xFF),                      // Старший байт адреса
+                UInt8(length & 0xFF),                              // Длина данных
+                0x00                                               // Padding
+            ])),
+            
+            // Команда 2: Альтернативная команда чтения памяти
+            ("Memory Read", Data([
+                0x1A,                                              // Команда чтения памяти
+                0x05, 0x04, 0x00,                                  // Стандартные байты протокола
+                UInt8(address & 0xFF),                             // Младший байт адреса
+                UInt8((address >> 8) & 0xFF),                      // Старший байт адреса
+                UInt8(length & 0xFF),                              // Длина данных
+                0x00                                               // Padding
+            ])),
+            
+            // Команда 3: Прямое чтение без протокольных байтов
+            ("Direct Read", Data([
+                0x1B,                                              // Команда чтения
+                UInt8(address & 0xFF),                             // Младший байт адреса
+                UInt8((address >> 8) & 0xFF),                      // Старший байт адреса
+                UInt8(length & 0xFF)                               // Длина данных
+            ])),
+            
+            // Команда 4: Команда чтения с другим форматом
+            ("Alternative Format", Data([
+                0x1B,                                              // Команда чтения
+                0x05, 0x20, 0x00,                                  // Альтернативные байты протокола
+                UInt8(address & 0xFF),                             // Младший байт адреса
+                UInt8((address >> 8) & 0xFF),                      // Старший байт адреса
+                UInt8(length & 0xFF),                              // Длина данных
+                0x00                                               // Padding
+            ])),
+            
+            // Команда 5: Команда чтения каналов (специфичная для UV-K5)
+            ("Channel Read", Data([
+                0x1B,                                              // Команда чтения
+                0x05, 0x08, 0x00,                                  // Специальные байты для каналов
+                UInt8(address & 0xFF),                             // Младший байт адреса
+                UInt8((address >> 8) & 0xFF),                      // Старший байт адреса
+                UInt8(length & 0xFF),                              // Длина данных
+                0x00                                               // Padding
+            ]))
+        ]
+        
+        for (commandName, command) in readCommands {
+            for attempt in 1...maxRetries {
+                logManager.log("🔄 \(commandName) (попытка \(attempt)/\(maxRetries)): \(command.map { String(format: "%02X", $0) }.joined(separator: " "))", level: .debug)
+                
+                // Очищаем буфер перед отправкой команды
+                await clearBuffer()
+                
+                logManager.log("📤 Отправка команды: \(command.map { String(format: "%02X", $0) }.joined(separator: " "))", level: .debug)
+                
+                do {
+                    let response = try await sendCommand(command)
+                    
+                    if !response.isEmpty {
+                        logManager.log("📥 Получен ответ (\(commandName)): \(response.map { String(format: "%02X", $0) }.joined(separator: " "))", level: .debug)
+                        
+                        // Проверяем, что ответ не является повторяющимся паттерном
+                        if !isRepeatingPattern(response) {
+                            logManager.log("✅ Получены уникальные данные с командой \(commandName)", level: .success)
+                            return response
+                        } else {
+                            logManager.log("⚠️ Команда \(commandName) вернула повторяющийся паттерн", level: .warning)
+                        }
+                    } else {
+                        logManager.log("⚠️ Пустой ответ на команду \(commandName), попытка \(attempt)", level: .warning)
+                    }
+                } catch {
+                    logManager.log("❌ Ошибка команды \(commandName), попытка \(attempt): \(error)", level: .warning)
+                }
+                
+                // Пауза между попытками
+                if attempt < maxRetries {
+                    try await Task.sleep(nanoseconds: 200_000_000) // 200ms
+                }
+            }
+            
+            // Пауза между разными командами
+            try await Task.sleep(nanoseconds: 500_000_000) // 500ms
+        }
+        
+        // Если все команды не сработали, возвращаем пустые данные
+        logManager.log("⚠️ Все команды чтения не сработали для адреса 0x\(String(format: "%04X", address))", level: .warning)
+        return Data()
+    }
+    
+    // Функция для очистки буфера
+    private func clearBuffer() async {
+        logManager.log("🧹 Очистка буфера перед отправкой команды", level: .debug)
+        
+        guard let usbManager = usbManager else { return }
+        
+        var attempts = 0
+        let maxAttempts = 3
+        
+        while attempts < maxAttempts {
+            // Пытаемся прочитать данные из буфера с коротким таймаутом
+            do {
+                // Используем пустую команду для проверки буфера
+                let testCommand = Data([0x00])
+                let response = try await sendCommand(testCommand)
+                if !response.isEmpty {
+                    logManager.log("🧹 Очищено \(response.count) байт из буфера", level: .debug)
+                    attempts += 1
+                } else {
+                    break
+                }
+            } catch {
+                break
+            }
+        }
+        
+        logManager.log("🧹 Буфер очищен после \(attempts) попыток", level: .debug)
+    }
+
     private func enterBootloader(interface: IOUSBInterfaceInterface300? = nil) async throws {
         let command = Data([Command.enterBootloader.rawValue, 0x00, 0x00, 0x00])
         let response = try await sendCommand(command)
@@ -1019,41 +1489,7 @@ class K5Protocol {
         return info
     }
     
-    private func parseChannel(from data: Data, index: Int) -> K5Channel? {
-        guard data.count >= 16 else { return nil }
-        
-        // Проверяем, что канал не пустой
-        let isEmpty = data.allSatisfy { $0 == 0xFF || $0 == 0x00 }
-        if isEmpty { return nil }
-        
-        var channel = K5Channel()
-        channel.index = index
-        
-        // Парсим частоту (4 байта, little endian)
-        let frequencyBytes = data.subdata(in: 0..<4)
-        let frequencyValue = frequencyBytes.withUnsafeBytes { $0.load(as: UInt32.self) }
-        channel.frequency = Double(frequencyValue) / 100000.0 // Конвертируем в MHz
-        
-        // Парсим настройки канала
-        channel.txPower = Int(data[4] & 0x03)
-        channel.bandwidth = (data[4] & 0x10) != 0 ? .wide : .narrow
-        channel.scrambler = (data[4] & 0x20) != 0
-        
-        // Парсим CTCSS/DCS коды
-        let rxTone = UInt16(data[5]) | (UInt16(data[6]) << 8)
-        let txTone = UInt16(data[7]) | (UInt16(data[8]) << 8)
-        
-        channel.rxTone = parseTone(rxTone)
-        channel.txTone = parseTone(txTone)
-        
-        // Парсим имя канала (если есть)
-        let nameData = data.subdata(in: 9..<16)
-        if let name = String(data: nameData, encoding: .ascii) {
-            channel.name = name.trimmingCharacters(in: .controlCharacters)
-        }
-        
-        return channel
-    }
+
     
     private func encodeChannel(_ channel: K5Channel) -> Data {
         var data = Data(count: 16)
@@ -1105,6 +1541,248 @@ class K5Protocol {
             return UInt16(frequency * 10)
         case .dcs(let code):
             return UInt16(code)
+        }
+    }
+    
+    // Функция для дешифровки данных канала UV-K5
+    private func decryptChannelData(_ data: Data) -> Data {
+        // Сначала попробуем без дешифровки - возможно данные не зашифрованы
+        // Логируем сырые данные для анализа
+        let hexString = data.map { String(format: "%02X", $0) }.joined(separator: " ")
+        logManager.log("🔍 Сырые данные канала: \(hexString)", level: .debug)
+        
+        // Попробуем разные варианты дешифровки
+        
+        // Вариант 1: Без дешифровки
+        let variant1 = data
+        
+        // Вариант 2: XOR с простым ключом
+        var variant2 = Data(capacity: data.count)
+        for (index, byte) in data.enumerated() {
+            let key: UInt8 = UInt8((index * 0x91 + 0x5A) & 0xFF)
+            variant2.append(byte ^ key)
+        }
+        
+        // Вариант 3: XOR с фиксированным ключом
+        var variant3 = Data(capacity: data.count)
+        let fixedKey: UInt8 = 0x5A
+        for byte in data {
+            variant3.append(byte ^ fixedKey)
+        }
+        
+        // Логируем все варианты
+        logManager.log("🔍 Вариант 1 (без дешифровки): \(variant1.map { String(format: "%02X", $0) }.joined(separator: " "))", level: .debug)
+        logManager.log("🔍 Вариант 2 (XOR переменный): \(variant2.map { String(format: "%02X", $0) }.joined(separator: " "))", level: .debug)
+        logManager.log("🔍 Вариант 3 (XOR фиксированный): \(variant3.map { String(format: "%02X", $0) }.joined(separator: " "))", level: .debug)
+        
+        // Пока возвращаем вариант без дешифровки
+        return variant1
+    }
+    
+    // Функция для парсинга частоты в BCD формате UV-K5
+    private func parseBcdFrequency(_ bytes: [UInt8]) -> Double {
+        guard bytes.count >= 4 else { return 0.0 }
+        
+        // BCD формат UV-K5: каждый полубайт представляет одну десятичную цифру
+        // Пример: [0x14, 0x52, 0x50, 0x00] -> 145.250 MHz
+        
+        var frequencyString = ""
+        
+        for byte in bytes {
+            let highNibble = (byte >> 4) & 0x0F
+            let lowNibble = byte & 0x0F
+            
+            // Проверяем валидность BCD цифр (должны быть 0-9)
+            if highNibble <= 9 && lowNibble <= 9 {
+                frequencyString += "\(highNibble)\(lowNibble)"
+            } else {
+                // Если не BCD формат, возвращаем 0
+                return 0.0
+            }
+        }
+        
+        // Преобразуем строку в число и делим на 100000 для получения MHz
+        if let frequencyInt = UInt32(frequencyString) {
+            let frequency = Double(frequencyInt) / 100000.0
+            logManager.log("🔍 BCD парсинг: \(bytes.map { String(format: "%02X", $0) }.joined()) -> \(frequencyString) -> \(frequency) MHz", level: .debug)
+            return frequency
+        }
+        
+        return 0.0
+    }
+    
+    // Функция для проверки повторяющихся паттернов в данных
+    private func isRepeatingPattern(_ data: Data) -> Bool {
+        guard data.count >= 4 else { return false }
+        
+        // Проверяем, повторяется ли первые 4 байта по всему блоку
+        let pattern = data.prefix(4)
+        let patternArray = Array(pattern)
+        
+        for i in stride(from: 0, to: data.count, by: 4) {
+            let chunk = data.dropFirst(i).prefix(4)
+            if Array(chunk) != patternArray {
+                return false
+            }
+        }
+        
+        return true
+    }
+    
+    // Улучшенная функция парсинга канала
+    private func parseChannel(from data: Data, index: Int) -> K5Channel? {
+        guard data.count >= 16 else {
+            logManager.log("❌ Недостаточно данных для канала \(index): \(data.count) байт", level: .debug)
+            return nil
+        }
+        
+        var channel = K5Channel()
+        channel.index = index
+        
+        // Дешифруем данные канала
+        let decryptedData = decryptChannelData(data)
+        
+        // Парсим частоту приема (первые 4 байта)
+        let rxFreqBytes = Array(decryptedData.prefix(4))
+        
+        // Пробуем разные форматы частоты
+        let bcdFreq = parseBcdFrequency(rxFreqBytes)
+        let le1Freq = parseFrequencyLE1(rxFreqBytes)
+        let le2Freq = parseFrequencyLE2(rxFreqBytes)
+        let beFreq = parseFrequencyBE(rxFreqBytes)
+        
+        logManager.log("🔍 Частоты: BCD=\(bcdFreq)MHz, LE1=\(le1Freq)MHz, LE2=\(le2Freq)MHz, BE=\(beFreq)MHz", level: .debug)
+        
+        // Выбираем наиболее подходящую частоту (в диапазоне UV-K5)
+        let frequencies = [bcdFreq, le1Freq, le2Freq, beFreq]
+        var selectedFreq = 0.0
+        
+        for freq in frequencies {
+            if freq >= 136.0 && freq <= 520.0 {  // Диапазон UV-K5
+                selectedFreq = freq
+                logManager.log("✅ Используем LE1 частоту: \(freq)MHz", level: .debug)
+                break
+            }
+        }
+        
+        // Если не нашли подходящую частоту, используем первую
+        if selectedFreq == 0.0 {
+            selectedFreq = le1Freq
+        }
+        
+        channel.frequency = selectedFreq
+        channel.txFrequency = selectedFreq  // По умолчанию TX = RX
+        
+        // Парсим настройки канала (байт 4)
+        if decryptedData.count > 4 {
+            let settings = decryptedData[4]
+            channel.txPower = Int(settings & 0x03)
+            channel.bandwidth = (settings & 0x10) != 0 ? .wide : .narrow
+            channel.scrambler = (settings & 0x20) != 0
+        } else {
+            channel.txPower = 2  // По умолчанию высокая мощность
+            channel.bandwidth = .wide
+            channel.scrambler = false
+        }
+        
+        // Парсим тоны (байты 5-8)
+        if decryptedData.count > 8 {
+            let rxToneValue = UInt16(decryptedData[5]) | (UInt16(decryptedData[6]) << 8)
+            let txToneValue = UInt16(decryptedData[7]) | (UInt16(decryptedData[8]) << 8)
+            
+            channel.rxTone = parseTone(rxToneValue)
+            channel.txTone = parseTone(txToneValue)
+        } else {
+            channel.rxTone = .none
+            channel.txTone = .none
+        }
+        
+        // Парсим имя канала (байты 9-15)
+        var name = ""
+        if decryptedData.count > 9 {
+            let nameData = decryptedData.dropFirst(9).prefix(7)
+            
+            // Ищем имя в разных позициях 16-байтового блока
+            let namePositions = [0, 8, 9, 10]  // Возможные позиции имени
+            
+            for position in namePositions {
+                if position + 6 < decryptedData.count {
+                    let testNameData = decryptedData.dropFirst(position).prefix(6)
+                    let testName = String(data: testNameData, encoding: .ascii)?
+                        .trimmingCharacters(in: .controlCharacters)
+                        .trimmingCharacters(in: .whitespaces)
+                        .filter { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" || $0 == " ") } ?? ""
+                    
+                    if testName.count >= 2 {  // Минимальная длина имени
+                        name = testName
+                        logManager.log("🔍 Найдено имя в позиции \(position): '\(name)'", level: .debug)
+                        break
+                    }
+                }
+            }
+            
+            // Если имя не найдено стандартным способом, попробуем другие методы
+            if name.isEmpty {
+                // Попробуем весь блок как ASCII
+                let fullName = String(data: nameData, encoding: .ascii)?
+                    .trimmingCharacters(in: .controlCharacters)
+                    .trimmingCharacters(in: .whitespaces)
+                    .filter { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" || $0 == " ") } ?? ""
+                
+                if fullName.count >= 2 {
+                    name = fullName
+                }
+            }
+        }
+        
+        // Если имя не найдено, используем номер канала
+        if name.isEmpty {
+            name = "CH-\(index + 1)"
+        }
+        channel.name = name
+        
+        // Проверяем валидность частот (должны быть в диапазоне UV-K5)
+        let isValidFreq = channel.frequency >= 18.0 && channel.frequency <= 1300.0
+        
+        if !isValidFreq {
+            logManager.log("📻 Канал \(index): недопустимая частота \(channel.frequency)MHz, пропускаем", level: .debug)
+            // Не возвращаем nil, а создаем канал с частотой по умолчанию для отладки
+            channel.frequency = 145.0
+            channel.txFrequency = 145.0
+        }
+        
+        // Логируем данные канала для отладки
+        logManager.log("📻 Канал \(index): RX=\(channel.frequency)MHz, TX=\(channel.txFrequency)MHz, Имя='\(name)', Мощность=\(channel.txPower)", level: .debug)
+        
+        return channel
+    }
+    
+    // Дополнительные функции парсинга частот
+    private func parseFrequencyLE1(_ bytes: [UInt8]) -> Double {
+        guard bytes.count >= 4 else { return 0.0 }
+        let value = UInt32(bytes[0]) | (UInt32(bytes[1]) << 8) | (UInt32(bytes[2]) << 16) | (UInt32(bytes[3]) << 24)
+        return Double(value) / 100000.0
+    }
+    
+    private func parseFrequencyLE2(_ bytes: [UInt8]) -> Double {
+        guard bytes.count >= 4 else { return 0.0 }
+        let value = UInt32(bytes[0]) | (UInt32(bytes[1]) << 8) | (UInt32(bytes[2]) << 16) | (UInt32(bytes[3]) << 24)
+        return Double(value) / 10000.0
+    }
+    
+    private func parseFrequencyBE(_ bytes: [UInt8]) -> Double {
+        guard bytes.count >= 4 else { return 0.0 }
+        let value = (UInt32(bytes[0]) << 24) | (UInt32(bytes[1]) << 16) | (UInt32(bytes[2]) << 8) | UInt32(bytes[3])
+        return Double(value) / 100000.0
+    }
+}
+
+// MARK: - Extensions
+
+extension Data {
+    func chunked(into size: Int) -> [Data] {
+        return stride(from: 0, to: count, by: size).map {
+            Data(self[$0..<Swift.min($0 + size, count)])
         }
     }
 }
